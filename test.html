@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IoT Dashboard - MQTT Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(to bottom right, #f8fafc, #f1f5f9);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #1e293b;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #64748b;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .status-card {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+
+        .status-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .status-label {
+            color: #475569;
+            min-width: 140px;
+            font-weight: 500;
+        }
+
+        .status-value {
+            color: #1e293b;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            word-break: break-all;
+            flex: 1;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        .status-indicator.connected {
+            background-color: #22c55e;
+            box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+        }
+
+        .status-indicator.disconnected {
+            background-color: #ef4444;
+            box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+        }
+
+        .status-indicator.loading {
+            background-color: #f59e0b;
+            box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            color: #475569;
+            font-weight: 500;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 25px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-connect {
+            background-color: #3b82f6;
+            color: white;
+        }
+
+        .btn-connect:hover {
+            background-color: #2563eb;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-connect:disabled {
+            background-color: #cbd5e1;
+            cursor: not-allowed;
+        }
+
+        .btn-disconnect {
+            background-color: #ef4444;
+            color: white;
+        }
+
+        .btn-disconnect:hover {
+            background-color: #dc2626;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-disconnect:disabled {
+            background-color: #cbd5e1;
+            cursor: not-allowed;
+        }
+
+        .message-log {
+            background: #1e293b;
+            color: #e2e8f0;
+            border-radius: 6px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 250px;
+            overflow-y: auto;
+            margin-top: 20px;
+            line-height: 1.6;
+        }
+
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 4px 0;
+            border-bottom: 1px solid #334155;
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .log-time {
+            color: #94a3b8;
+        }
+
+        .log-success {
+            color: #22c55e;
+        }
+
+        .log-error {
+            color: #f87171;
+        }
+
+        .log-info {
+            color: #60a5fa;
+        }
+
+        .device-data {
+            background: #f0fdf4;
+            border: 1px solid #86efac;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 20px;
+            font-size: 13px;
+        }
+
+        .device-data h3 {
+            color: #15803d;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .device-item {
+            color: #166534;
+            margin-bottom: 6px;
+            padding: 4px 0;
+        }
+
+        .device-item:last-child {
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 IoT Dashboard Test</h1>
+        <p class="subtitle">Test MQTT connectivity through ngrok</p>
+
+        <!-- Status Card -->
+        <div class="status-card">
+            <div class="status-item">
+                <span class="status-indicator loading" id="connectionIndicator"></span>
+                <span class="status-label">Connection Status:</span>
+                <span class="status-value" id="connectionStatus">Disconnected</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Current Hostname:</span>
+                <span class="status-value" id="hostname">-</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Protocol:</span>
+                <span class="status-value" id="protocol">-</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Broker URL:</span>
+                <span class="status-value" id="brokerUrl">-</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Connection Attempts:</span>
+                <span class="status-value" id="attempts">0</span>
+            </div>
+        </div>
+
+        <!-- Settings -->
+        <div class="form-group">
+            <label for="brokerInput">MQTT Broker URL:</label>
+            <input 
+                type="text" 
+                id="brokerInput" 
+                placeholder="ws://pbl.deepakd24.tech:8083"
+                value="ws://pbl.deepakd24.tech:8083"
+            >
+        </div>
+
+        <div class="form-group">
+            <label for="usernameInput">Username (optional):</label>
+            <input 
+                type="text" 
+                id="usernameInput" 
+                placeholder="iotuser"
+                value="iotuser"
+            >
+        </div>
+
+        <div class="form-group">
+            <label for="passwordInput">Password (optional):</label>
+            <input 
+                type="password" 
+                id="passwordInput" 
+                placeholder="SuperSecret123"
+                value="SuperSecret123"
+            >
+        </div>
+
+        <!-- Buttons -->
+        <div class="button-group">
+            <button class="btn-connect" id="connectBtn" onclick="connectMQTT()">Connect</button>
+            <button class="btn-disconnect" id="disconnectBtn" onclick="disconnectMQTT()" disabled>Disconnect</button>
+        </div>
+
+        <!-- Message Log -->
+        <div class="message-log" id="messageLog"></div>
+
+        <!-- Device Data -->
+        <div class="device-data" id="deviceData" style="display: none;">
+            <h3>📊 Device Data</h3>
+            <div class="device-item">Flow Sensor: <strong id="flowData">-</strong></div>
+            <div class="device-item">Moisture: <strong id="moistureData">-</strong></div>
+            <div class="device-item">Actuator Status: <strong id="actuatorData">-</strong></div>
+        </div>
+    </div>
+
+    <script>
+        let client = null;
+        let connectionAttempts = 0;
+        const MAX_LOG_ENTRIES = 50;
+        let logEntries = [];
+
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            updateStatusDisplay();
+        });
+
+        function updateStatusDisplay() {
+            const hostname = window.location.hostname;
+            const protocol = window.location.protocol;
+            
+            document.getElementById('hostname').textContent = hostname || 'Unknown';
+            document.getElementById('protocol').textContent = protocol || 'Unknown';
+        }
+
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = {
+                time: timestamp,
+                message: message,
+                type: type
+            };
+            
+            logEntries.push(entry);
+            if (logEntries.length > MAX_LOG_ENTRIES) {
+                logEntries.shift();
+            }
+
+            const messageLog = document.getElementById('messageLog');
+            const logHtml = logEntries.map(entry => {
+                const className = `log-${entry.type}`;
+                return `<div class="log-entry"><span class="log-time">[${entry.time}]</span> <span class="${className}">${entry.message}</span></div>`;
+            }).join('');
+            
+            messageLog.innerHTML = logHtml;
+            messageLog.scrollTop = messageLog.scrollHeight;
+        }
+
+        function connectMQTT() {
+            const brokerUrl = document.getElementById('brokerInput').value;
+            const username = document.getElementById('usernameInput').value;
+            const password = document.getElementById('passwordInput').value;
+
+            if (!brokerUrl) {
+                addLog('❌ Broker URL is required', 'error');
+                return;
+            }
+
+            connectionAttempts++;
+            document.getElementById('attempts').textContent = connectionAttempts;
+
+            addLog(`🔄 Connecting to ${brokerUrl}...`, 'info');
+            updateIndicator('loading');
+
+            try {
+                // Check if mqtt.js is available
+                if (typeof mqtt === 'undefined') {
+                    throw new Error('MQTT.js library not loaded');
+                }
+
+                const options = {
+                    keepalive: 60,
+                    connectTimeout: 15000,
+                    reconnectPeriod: 5000,
+                    clean: true,
+                    clientId: `test-dashboard-${Math.random().toString(16).slice(2, 8)}`,
+                };
+
+                if (username && password) {
+                    options.username = username;
+                    options.password = password;
+                }
+
+                client = mqtt.connect(brokerUrl, options);
+
+                client.on('connect', () => {
+                    addLog('✅ Successfully connected to MQTT broker!', 'success');
+                    updateIndicator('connected');
+                    document.getElementById('connectionStatus').textContent = 'Connected';
+                    document.getElementById('connectBtn').disabled = true;
+                    document.getElementById('disconnectBtn').disabled = false;
+                    document.getElementById('deviceData').style.display = 'block';
+
+                    // Subscribe to telemetry
+                    client.subscribe('iot/telemetry', (err) => {
+                        if (err) {
+                            addLog(`❌ Failed to subscribe: ${err.message}`, 'error');
+                        } else {
+                            addLog('📡 Subscribed to iot/telemetry', 'success');
+                        }
+                    });
+                });
+
+                client.on('message', (topic, message) => {
+                    try {
+                        const payload = JSON.parse(message.toString());
+                        addLog(`📨 Message from ${topic}: ${JSON.stringify(payload)}`, 'info');
+                        
+                        // Update device data
+                        if (payload.flowRate !== undefined) {
+                            document.getElementById('flowData').textContent = `${payload.flowRate} L/min`;
+                        }
+                        if (payload.moisture !== undefined) {
+                            document.getElementById('moistureData').textContent = `${payload.moisture}%`;
+                        }
+                        if (payload.motor !== undefined) {
+                            document.getElementById('actuatorData').textContent = payload.motor ? 'ON' : 'OFF';
+                        }
+                    } catch (e) {
+                        addLog(`📨 Message from ${topic}: ${message.toString()}`, 'info');
+                    }
+                });
+
+                client.on('error', (error) => {
+                    addLog(`❌ Connection error: ${error.message}`, 'error');
+                    updateIndicator('disconnected');
+                });
+
+                client.on('offline', () => {
+                    addLog('⚠️ Client went offline', 'error');
+                    updateIndicator('disconnected');
+                });
+
+                client.on('reconnect', () => {
+                    addLog('🔄 Attempting to reconnect...', 'info');
+                    updateIndicator('loading');
+                });
+
+            } catch (error) {
+                addLog(`❌ Error: ${error.message}`, 'error');
+                updateIndicator('disconnected');
+            }
+        }
+
+        function disconnectMQTT() {
+            if (client) {
+                client.end(() => {
+                    addLog('🔌 Disconnected from MQTT broker', 'info');
+                    updateIndicator('disconnected');
+                    document.getElementById('connectionStatus').textContent = 'Disconnected';
+                    document.getElementById('connectBtn').disabled = false;
+                    document.getElementById('disconnectBtn').disabled = true;
+                    client = null;
+                });
+            }
+        }
+
+        function updateIndicator(status) {
+            const indicator = document.getElementById('connectionIndicator');
+            indicator.className = `status-indicator ${status}`;
+        }
+
+        // Load MQTT.js library
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/mqtt@4.3.7/dist/mqtt.min.js';
+        script.onload = () => {
+            addLog('📚 MQTT.js library loaded', 'success');
+        };
+        script.onerror = () => {
+            addLog('❌ Failed to load MQTT.js library', 'error');
+        };
+        document.head.appendChild(script);
+    </script>
+</body>
+</html>
